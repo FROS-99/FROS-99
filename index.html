@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FROS_99 — بحث</title>
+  <style>
+    body {
+      margin:0;
+      font-family:system-ui;
+      color:#fff;
+      display:flex;
+      justify-content:center;
+      padding:40px;
+      background:#000 url('YOUR_IMAGE_URL_HERE') no-repeat center center fixed;
+      background-size: cover;
+    }
+    .overlay {
+      background: rgba(0,0,0,0.95);
+      width:100%;
+      max-width:600px;
+      padding:40px;
+      border-radius:16px;
+      box-shadow:0 8px 20px rgba(255,255,255,0.2);
+    }
+    .brand {
+      text-align:center;
+      font-size:36px;
+      font-weight:bold;
+      margin-bottom:20px;
+      color:#007bff;
+      text-shadow:1px 1px 3px #000;
+    }
+    .login,.search {display:flex;flex-direction:column}
+    input,button,select {
+      width:100%;padding:12px;border-radius:10px;border:none;font-size:16px;margin-bottom:12px
+    }
+    input,select {background:#222;color:#fff;border:1px solid #444}
+    button {background:#007bff;color:#fff;font-weight:bold;cursor:pointer;transition:0.2s}
+    button:hover {background:#3399ff}
+    .results {margin-top:18px;display:flex;flex-direction:column;gap:12px}
+    .card {padding:14px;background:#111;border-radius:14px;border:1px solid #333;
+           display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(255,255,255,0.1);}
+    .title {font-weight:bold;margin-bottom:6px;color:#fff}
+    .link button {background:#0056b3;color:#fff;font-weight:bold;border:none;
+                  padding:6px 12px;border-radius:6px;cursor:pointer;transition:0.2s}
+    .link button:hover {background:#3399ff}
+    img.site-img {width:70px;height:70px;border-radius:12px;object-fit:cover;}
+  </style>
+</head>
+<body>
+<div class="overlay">
+  <div class="brand">FROS_99</div>
+
+  <!-- كلمة السر الوحيدة -->
+  <div id="login1" class="login">
+    <input id="pw1" type="password" placeholder="أدخل كلمة المرور" />
+    <button onclick="check1()">دخول</button>
+    <div id="err1" style="color:#ff4040;display:none;font-size:14px">كلمة المرور خاطئة</div>
+  </div>
+
+  <!-- واجهة البحث -->
+  <div id="searchBox" class="search" style="display:none;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <select id="engine">
+        <option value="google">Google (API)</option>
+        <option value="bing">Bing</option>
+        <option value="yahoo">Yahoo</option>
+        <option value="duckduckgo">DuckDuckGo</option>
+        <option value="brave">Brave</option>
+      </select>
+      <select id="country">
+        <option value="US">أمريكا</option>
+        <option value="RU">روسيا</option>
+        <option value="CA">كندا</option>
+        <option value="CN">الصين</option>
+        <option value="JP">اليابان</option>
+        <option value="KR">كوريا</option>
+      </select>
+    </div>
+    <input id="query" type="text" placeholder="اكتب للبحث…" />
+    <button onclick="doSearch()">بحث</button>
+    <div id="results" class="results"></div>
+  </div>
+</div>
+
+<script>
+const API_KEY = "AIzaSyBadBstOxrLFgb3B0DkALZsK6uTBtnonZk";
+const CX = "b4e056a539a6d4bf8";
+
+function check1(){
+  let x = document.getElementById("pw1").value;
+  if(x === "1123"){
+    document.getElementById("login1").style.display = "none";
+    document.getElementById("searchBox").style.display = "block";
+    sessionStorage.setItem("enteredPassword", "true");
+  } else {
+    document.getElementById("err1").style.display = "block";
+  }
+}
+
+async function doSearch(){
+  let q = document.getElementById("query").value.trim();
+  let engine = document.getElementById("engine").value;
+  let country = document.getElementById("country").value;
+  let box = document.getElementById("results");
+  if(!q) return;
+
+  box.innerHTML = "جاري جلب النتائج…";
+
+  if(engine === "google"){
+    let url = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX}&q=${encodeURIComponent(q)}&gl=${country}`;
+    try{
+      let res = await fetch(url);
+      let data = await res.json();
+      if(!data.items){ box.innerHTML = "لا توجد نتائج"; return; }
+
+      box.innerHTML = "";
+      data.items.slice(0,10).forEach((item,i)=>{
+        let img = item.pagemap?.cse_image?.[0]?.src ||
+                  `https://www.google.com/s2/favicons?domain=${(new URL(item.link)).hostname}`;
+        box.innerHTML += `
+        <div class='card'>
+          <img src='${img}' class='site-img'>
+          <div style='flex:1;'>
+            <div class='title'>${i+1}. ${item.title}</div>
+            <div class='link'><button onclick='openSite("${item.link}")'>فتح</button></div>
+          </div>
+        </div>`;
+      });
+    } catch(e){
+      box.innerHTML = "حدث خطأ — تحقق من API أو CX";
+    }
+  } else {
+    let searchURL = "";
+    switch(engine){
+      case "bing": searchURL = `https://www.bing.com/search?q=${encodeURIComponent(q)}&cc=${country}`; break;
+      case "yahoo": searchURL = `https://search.yahoo.com/search?p=${encodeURIComponent(q)}&vl=${country}`; break;
+      case "duckduckgo": searchURL = `https://duckduckgo.com/?q=${encodeURIComponent(q)}&kl=${country.toLowerCase()}`; break;
+      case "brave": searchURL = `https://search.brave.com/search?q=${encodeURIComponent(q)}&country=${country}`; break;
+    }
+    openSite(searchURL);
+  }
+}
+
+function openSite(url){
+  sessionStorage.setItem("enteredPassword", "true");
+  sessionStorage.setItem("goBackToSearch", "true");
+  window.location.href = url;
+}
+
+window.addEventListener("load", () => {
+  if (sessionStorage.getItem("goBackToSearch") === "true") {
+    document.getElementById("login1").style.display = "none";
+    document.getElementById("searchBox").style.display = "block";
+    sessionStorage.removeItem("goBackToSearch");
+  }
+});
+</script>
+</body>
+</html>
